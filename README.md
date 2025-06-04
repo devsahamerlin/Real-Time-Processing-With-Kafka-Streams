@@ -4,13 +4,15 @@
 - The Github folder [`WeatherDataAnalysisKafkaStreams`](https://github.com/devsahamerlin/Real-Time-Processing-With-Kafka-Streams/tree/main/WeatherDataAnalysisKafkaStreams) contains the Java project on Weather Data Analysis.
 - The Github folder [`KafkaStreamsProducerConsumerFullStackSpringBootThymeleaf`](https://github.com/devsahamerlin/Real-Time-Processing-With-Kafka-Streams/tree/main/KafkaStreamsProducerConsumerFullStackSpringBootThymeleaf) contains the Java project on `Calculating the number of clicks with Kafka Streams and Spring Boot`.
 
+### Want to know more about [`Kafka Architecture and Deployment Mode ? check this repository readme`](https://github.com/devsahamerlin/kafka-docker-compose)
+
 ## Deploy Kafka Broker 
 ```shell
 cd infra
 docker-compose -f common.yml -f docker-compose.yml up -d
 ```
 
-# 1 : Analyse de Données Météorologiques
+# Example 1 : Analyse de Données Météorologiques
 
 ## Create required topics
 ```shell
@@ -50,7 +52,7 @@ kafka-console-consumer --topic station-averages --bootstrap-server localhost:909
 
 ![weather-consumer.png](images/weather-consumer.png)
 
-# 2 : Calculating the number of clicks with Kafka Streams and Spring Boot Full-Stack Application With Thymeleaf
+# Example 2 : Calculating the number of clicks with Kafka Streams and Spring Boot Full-Stack Application With Thymeleaf
 
 ![kafka_architecture_diagram.svg](images/kafka_architecture_diagram.svg)
 

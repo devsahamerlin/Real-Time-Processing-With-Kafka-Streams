@@ -2,6 +2,8 @@
 
 ![kafka_architecture_diagram.svg](../images/kafka_architecture_diagram.svg)
 
+### Want to know more about [`Kafka Architecture and Deployment Mode ? check this repository readme`](https://github.com/devsahamerlin/kafka-docker-compose)
+  
 ## Create required topics (Topic are automatically created when you run all applications, but if not, use these command)
 ```shell
 # If Kafka-broker is not yet deployed, use this command:
