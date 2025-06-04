@@ -1,0 +1,112 @@
+spring:
+  application:
+    name: click-consumer
+
+  datasource:
+    url: jdbc:h2:mem:clickconsumer;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        # Enable batch processing for better performance when handling lots of updates
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+  
+  # H2 Console configuration for database inspection
+  # Access at http://localhost:8082/h2-console during development
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+  
+  # Kafka configuration
+  # Notice how we inherit the bootstrap servers from our parent configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    
+    # Consumer-specific configuration
+    # These settings are optimized for reliable message processing
+    consumer:
+      group-id: click-count-consumer-group
+      auto-offset-reset: earliest  # Start from beginning for this exercise
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      enable-auto-commit: true
+      auto-commit-interval: 5000  # Commit offsets every 5 seconds
+      max-poll-records: 100  # Process up to 100 records per poll
+      
+      # JSON deserializer configuration
+      # This tells the deserializer which classes it can safely instantiate
+      properties:
+        spring.json.trusted.packages: "com.merlin.kafka.model"
+        spring.json.value.default.type: "com.merlin.kafka.model.ClickCountResult"
+        spring.json.type.mapping: "clickCountResult:com.merlin.kafka.model.ClickCountResult"
+
+# Server configuration
+# Run on a different port than the producer to avoid conflicts
+server:
+  port: 8082
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Actuator configuration for monitoring and health checks
+# These endpoints help us monitor the health of our consumer application
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,kafka
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# Logging configuration
+# Proper logging is crucial for debugging event-driven systems
+logging:
+  level:
+    com.merlin.clickconsumer: INFO
+    com.merlin.kafka: INFO
+    org.springframework.kafka: WARN
+    org.apache.kafka: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Custom application properties
+# These properties help us fine-tune the behavior of our consumer
+app:
+  kafka:
+    # How long to wait for Kafka to be available at startup
+    startup-timeout: 60s
+    # Whether to create topics automatically (useful for development)
+    auto-create-topics: true
+  
+  # Database connection pool settings for better performance
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 20000
+      idle-timeout: 600000
+      max-lifetime: 1800000

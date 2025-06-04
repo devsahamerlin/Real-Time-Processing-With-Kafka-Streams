@@ -1,4 +1,6 @@
 services:
+  # Zookeeper coordinates the Kafka cluster and maintains configuration
+  # It's like the "brain" that keeps track of which brokers are alive and manages leadership
   zk-1:
     image: confluentinc/cp-zookeeper:${KAFKA_VERSION}
     hostname: zk-1
@@ -13,13 +15,22 @@ services:
       ZOOKEEPER_INIT_LIMIT: 5
       ZOOKEEPER_SYNC_LIMIT: 2
       ZOOKEEPER_SERVERS: zk-1:2888:3888
+      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: WARN
+      ZOOKEEPER_TOOLS_LOG4J_LOGLEVEL: ERROR
     volumes:
       - "./volumes/zookeeper/data:/var/lib/zookeeper/data"
       - "./volumes/zookeeper/transactions:/var/lib/zookeeper/log"
     user: root
     networks:
       - ${GLOBAL_NETWORK}
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo 'ruok' | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Kafka broker handles the actual message storage and delivery
+  # This is where your click events will be stored and processed
   kafka-broker-1:
     image: confluentinc/cp-kafka:${KAFKA_VERSION}
     hostname: kafka-broker-1
@@ -28,25 +39,134 @@ services:
     volumes:
       - "./volumes/kafka/broker-1:/var/lib/kafka/data"
     depends_on:
-      - zk-1
+      zk-1:
+        condition: service_healthy
     ports:
       - "9092:9092"
+      - "9101:9101"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zk-1:2181
+      
+      # Topic management settings - allows your Spring Boot apps to create topics automatically
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_DELETE_TOPIC_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
-      # Listener configuration
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-
-      # Other configuration
-      KAFKA_LOG4J_LOGGERS: "kafka.authorizer.logger=INFO,kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
-      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      
+      # Listener configuration - this is crucial for connecting from your Spring Boot apps
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      
+      # Performance and reliability settings
+      KAFKA_NUM_NETWORK_THREADS: 3
+      KAFKA_NUM_IO_THREADS: 8
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 102400
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 102400
+      KAFKA_SOCKET_REQUEST_MAX_BYTES: 104857600
+      
+      # Log settings - important for your click event retention
+      KAFKA_LOG_RETENTION_HOURS: 168  # 7 days
+      KAFKA_LOG_RETENTION_BYTES: 1073741824  # 1GB
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+      
+      # Compression helps with network efficiency for your click events
       KAFKA_COMPRESSION_TYPE: producer
+      
+      # JMX settings for monitoring
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      
+      # Logging configuration
+      KAFKA_LOG4J_LOGGERS: "kafka.authorizer.logger=INFO,kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
       KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      
+      # Memory settings appropriate for development
+      KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
+      
+      # Group coordinator settings for your consumer groups
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
     user: root
     networks:
       - ${GLOBAL_NETWORK}
+    healthcheck:
+      test: ["CMD", "bash", "-c", "unset JMX_PORT; kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # AKHQ- Kafka Management UI
+  # This is like having a dashboard for entire Kafka ecosystem
+  # Use this to monitor click events, inspect topics, and debug issues
+  akhq:
+    image: tchiotludo/akhq:latest
+    hostname: akhq
+    container_name: akhq
+    restart: on-failure
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+    ports:
+      - "8084:8080"
+    environment:
+      AKHQ_CONFIGURATION: |
+        akhq:
+          connections:
+            docker-kafka-server:
+              properties:
+                bootstrap.servers: "kafka-broker-1:29092"
+              schema-registry:
+                url: "http://schema-registry:8081"
+              connect:
+                - name: "connect"
+                  url: "http://kafka-connect:8083"
+        
+          # Security configuration (basic for development)
+          security:
+            default-group: admin
+        
+          # UI Configuration
+          ui-options:
+            topic:
+              default-view: ALL  # Show all topics by default
+              skip-consumer-groups: false
+              skip-last-record: false
+            topic-data:
+              sort: OLDEST  # Show oldest messages first
+              size: 50      # Show 50 messages per page
+        
+          # Server configuration
+          server:
+            access-log:
+              enabled: false
+        
+          # Monitoring and health check
+          management:
+            endpoint:
+              health:
+                show-details: always
+
+    volumes:
+      - "./volumes/akhq:/app/conf"
+    networks:
+      - ${GLOBAL_NETWORK}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+# Volume configuration for data persistence
+# This ensures Kafka data survives container restarts
+volumes:
+  zookeeper-data:
+    driver: local
+  zookeeper-logs:
+    driver: local
+  kafka-data:
+    driver: local
