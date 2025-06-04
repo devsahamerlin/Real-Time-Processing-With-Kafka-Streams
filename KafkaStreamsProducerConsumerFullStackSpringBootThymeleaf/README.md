@@ -1,58 +1,6 @@
-# Real Time Processing With Kafka Streams for Java Development
+# Calculating the number of clicks with Kafka Streams and Spring Boot Full-Stack Application With Thymeleaf
 
-- The Github folder [`infra`](https://github.com/devsahamerlin/Real-Time-Processing-With-Kafka-Streams/tree/main/infra) contains the docker-compose file to deploy a local Kafka cluster.
-- The Github folder [`WeatherDataAnalysisKafkaStreams`](https://github.com/devsahamerlin/Real-Time-Processing-With-Kafka-Streams/tree/main/WeatherDataAnalysisKafkaStreams) contains the Java project on Weather Data Analysis.
-- The Github folder [`KafkaStreamsProducerConsumerFullStackSpringBootThymeleaf`](https://github.com/devsahamerlin/Real-Time-Processing-With-Kafka-Streams/tree/main/KafkaStreamsProducerConsumerFullStackSpringBootThymeleaf) contains the Java project on `Calculating the number of clicks with Kafka Streams and Spring Boot`.
-
-## Deploy Kafka Broker 
-```shell
-cd infra
-docker-compose -f common.yml -f docker-compose.yml up -d
-```
-
-# 1 : Analyse de Données Météorologiques
-
-## Create required topics
-```shell
-docker exec -it kafka-broker-1 bash
-cd
-kafka-topics --bootstrap-server localhost:9092 --create --topic weather-data --replication-factor 1 --partitions 1
-kafka-topics --bootstrap-server localhost:9092 --create --topic station-averages --replication-factor 1 --partitions 1
-
-kafka-topics --bootstrap-server localhost:9092 --list
-```
-
-![weheater-topics.png](images/weheater-topics.png)
-
-## Execute application `WeatherDataProcessor`
-
-1. Publication et lecture les données météo depuis le topic 'weather-data'.
-### Producer
-```shell
-docker exec -it kafka-broker-1 bash
-cd
-kafka-console-producer --topic weather-data --bootstrap-server localhost:9092
-```
-
-![weather-producer.png](images/weather-producer.png)
-
-2. Filtrer et transformer les relevés météorologiques a partir de l'application
-
-![weather-streams.png](images/weather-streams.png)
-
-3. Publier les moyennes de température et d'humidité par station dans le topic 'station-averages'.
-### Consumer
-```shell
-docker exec -it kafka-broker-1 bash
-cd
-kafka-console-consumer --topic station-averages --bootstrap-server localhost:9092 --from-beginning
-```
-
-![weather-consumer.png](images/weather-consumer.png)
-
-# 2 : Calculating the number of clicks with Kafka Streams and Spring Boot Full-Stack Application With Thymeleaf
-
-![kafka_architecture_diagram.svg](images/kafka_architecture_diagram.svg)
+![kafka_architecture_diagram.svg](../images/kafka_architecture_diagram.svg)
 
 ## Create required topics (Topic are automatically created when you run all applications, but if not, use these command)
 ```shell
@@ -67,9 +15,9 @@ kafka-console-consumer --topic station-averages --bootstrap-server localhost:909
 #
 #kafka-topics --bootstrap-server localhost:9092 --list
 ```
-![deploy-broker.png](images/deploy-broker.png)
+![deploy-broker.png](../images/deploy-broker.png)
 
-![docker-broker.png](images/docker-broker.png)
+![docker-broker.png](../images/docker-broker.png)
 
 ## Run all Modules
 
@@ -78,14 +26,14 @@ kafka-console-consumer --topic station-averages --bootstrap-server localhost:909
 cd click-producer
 mvn spring-boot:run
 ````
-![run-click-producer.png](images/run-click-producer.png)
+![run-click-producer.png](../images/run-click-producer.png)
 
 ### Terminal 2 - Start the Streams Application
 ```shell
 cd click-streams
 mvn spring-boot:run
 ```
-![run-click-streams.png](images/run-click-streams.png)
+![run-click-streams.png](../images/run-click-streams.png)
 
 # Terminal 3 - Start the Consumer API
 
@@ -93,7 +41,7 @@ mvn spring-boot:run
 cd click-consumer
 mvn spring-boot:run
 ```
-![run-click-consumer.png](images/run-click-consumer.png)
+![run-click-consumer.png](../images/run-click-consumer.png)
 
 ## URLs:
 - H2 Database url: http://localhost:8080/h2-console
@@ -103,40 +51,40 @@ mvn spring-boot:run
 - Consumer REST Statistique(number of user + total clicks): http://localhost:8082/api/clicks/stats
 
 ### Producer and Thymeleaf Web UI: http://localhost:8080/
-![web-app.png](images/web-app.png)
+![web-app.png](../images/web-app.png)
 
 1. Click on the button and view result
 
-![web-app-click.png](images/web-app-click.png)
+![web-app-click.png](../images/web-app-click.png)
 
-![users-2.png](images/users-2.png)
+![users-2.png](../images/users-2.png)
 
-![akhq-click-count-topic.png](images/akhq-click-count-topic.png)
+![akhq-click-count-topic.png](../images/akhq-click-count-topic.png)
 
 2. Click Producer
 
-![Click-Producer-log.png](images/Click-Producer-log.png)
+![Click-Producer-log.png](../images/Click-Producer-log.png)
 
 
 3. Click-streams
 
-![Click-Streams-log.png](images/Click-Streams-log.png)
+![Click-Streams-log.png](../images/Click-Streams-log.png)
 
 4. Click Consumer:
 
 - console log
-  ![Click-Consumer-log.png](images/Click-Consumer-log.png)
+  ![Click-Consumer-log.png](../images/Click-Consumer-log.png)
 
 - REST Endpoints: http://localhost:8082/api/clicks/count
-  ![count-click-consumer-endpoints.png](images/count-click-consumer-endpoints.png)
+  ![count-click-consumer-endpoints.png](../images/count-click-consumer-endpoints.png)
 
 5. Kafka UI on AKHQ: http://localhost:8084
 
 - click topic
-  ![akhq-click-topic.png](images/akhq-click-topic.png)
+  ![akhq-click-topic.png](../images/akhq-click-topic.png)
 
 - click-count topic
-  ![akhq-click-counts-topic.png](images/akhq-click-counts-topic.png)
+  ![akhq-click-counts-topic.png](../images/akhq-click-counts-topic.png)
 
 # The Architecture Overview: From Click to Count
 Our system is designed around the concept of event-driven architecture, where user actions trigger a cascade of events that flow through different components like water flowing through a carefully designed canal system. Each component is responsible for one specific aspect of the overall process, which makes the system both scalable and maintainable.
